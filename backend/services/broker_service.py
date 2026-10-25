@@ -8,10 +8,19 @@ Supports:
 
 import time
 import math
-import scipy.stats as si
 from datetime import datetime, timedelta
 from typing import Dict, Any, List, Optional, Tuple
 from db.database import get_active_credentials
+
+
+def _norm_cdf(x: float) -> float:
+    """Standard normal cumulative distribution function using math.erf."""
+    return 0.5 * (1.0 + math.erf(x / math.sqrt(2.0)))
+
+
+def _norm_pdf(x: float) -> float:
+    """Standard normal probability density function."""
+    return math.exp(-0.5 * x * x) / math.sqrt(2.0 * math.pi)
 
 
 # Dhan Security IDs map for prominent Nifty 50 stocks & indices
@@ -54,13 +63,13 @@ def black_scholes_greeks(S: float, K: float, T: float, r: float, sigma: float, o
     d2 = d1 - sigma * math.sqrt(T)
 
     if option_type == "CE":
-        price = S * si.norm.cdf(d1, 0.0, 1.0) - K * math.exp(-r * T) * si.norm.cdf(d2, 0.0, 1.0)
-        delta = si.norm.cdf(d1, 0.0, 1.0)
-        theta = -(S * si.norm.pdf(d1, 0.0, 1.0) * sigma) / (2 * math.sqrt(T)) - r * K * math.exp(-r * T) * si.norm.cdf(d2, 0.0, 1.0)
+        price = S * _norm_cdf(d1) - K * math.exp(-r * T) * _norm_cdf(d2)
+        delta = _norm_cdf(d1)
+        theta = -(S * _norm_pdf(d1) * sigma) / (2 * math.sqrt(T)) - r * K * math.exp(-r * T) * _norm_cdf(d2)
     else:
-        price = K * math.exp(-r * T) * si.norm.cdf(-d2, 0.0, 1.0) - S * si.norm.cdf(-d1, 0.0, 1.0)
-        delta = si.norm.cdf(d1, 0.0, 1.0) - 1.0  # Put delta is negative
-        theta = -(S * si.norm.pdf(d1, 0.0, 1.0) * sigma) / (2 * math.sqrt(T)) + r * K * math.exp(-r * T) * si.norm.cdf(-d2, 0.0, 1.0)
+        price = K * math.exp(-r * T) * _norm_cdf(-d2) - S * _norm_cdf(-d1)
+        delta = _norm_cdf(d1) - 1.0  # Put delta is negative
+        theta = -(S * _norm_pdf(d1) * sigma) / (2 * math.sqrt(T)) + r * K * math.exp(-r * T) * _norm_cdf(-d2)
 
     # Convert theta to per-day decay
     theta_day = theta / 365.0
