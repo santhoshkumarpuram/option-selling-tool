@@ -1,0 +1,3 @@
+cd ~/option-selling-tool
+git pull
+sudo systemctl restart optionsell

@@ -131,19 +131,19 @@ export default function Settings() {
   const selectedBrokerConfig = BROKERS.find(b => b.id === activeBroker)
 
   return (
-    <div className="p-6 max-w-4xl mx-auto space-y-6">
+    <div className="p-3.5 sm:p-6 max-w-4xl mx-auto space-y-4 sm:space-y-6">
       <div>
-        <h1 className="text-2xl font-bold tracking-tight text-white">Broker API & Settings</h1>
-        <p className="text-sm text-slate-400 mt-0.5">
+        <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-white">Broker API & Settings</h1>
+        <p className="text-xs sm:text-sm text-slate-400 mt-0.5">
           Connect your broker credentials for live data/trading, configure DSRD delta ranges and stop-loss rules
         </p>
       </div>
 
       {/* Broker Integration Card */}
-      <div className="bg-[var(--color-bg-card)] rounded-xl border border-[var(--color-border)] p-6 shadow-md space-y-5">
-        <div className="flex items-center justify-between border-b border-[var(--color-border)] pb-4">
+      <div className="bg-[var(--color-bg-card)] rounded-xl border border-[var(--color-border)] p-4 sm:p-6 shadow-md space-y-4 sm:space-y-5">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 border-b border-[var(--color-border)] pb-4">
           <div>
-            <h2 className="text-base font-bold text-white flex items-center gap-2">
+            <h2 className="text-sm sm:text-base font-bold text-white flex items-center gap-2">
               <Key className="w-5 h-5 text-[var(--color-primary)]" />
               Multi-Broker Connection
             </h2>
@@ -154,7 +154,7 @@ export default function Settings() {
 
           <span
             className={clsx(
-              'px-3 py-1 rounded-full text-xs font-bold flex items-center gap-1.5',
+              'self-start sm:self-auto px-3 py-1 rounded-full text-xs font-bold flex items-center gap-1.5',
               brokerStatus?.connected
                 ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40'
                 : 'bg-amber-500/20 text-amber-300 border border-amber-500/40'
@@ -166,7 +166,7 @@ export default function Settings() {
         </div>
 
         {/* Broker Tabs */}
-        <div className="grid grid-cols-3 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 sm:gap-3">
           {BROKERS.map(b => (
             <button
               key={b.id}
@@ -176,7 +176,7 @@ export default function Settings() {
                 setConnectMsg(null)
               }}
               className={clsx(
-                'p-3.5 rounded-xl border text-left transition-all',
+                'p-3 sm:p-3.5 rounded-xl border text-left transition-all',
                 activeBroker === b.id
                   ? 'border-[var(--color-primary)] bg-[var(--color-primary)]/10 shadow-sm'
                   : 'border-[var(--color-border)] bg-[var(--color-bg-dark)]/60 hover:bg-slate-800/40'
@@ -203,7 +203,7 @@ export default function Settings() {
             </div>
           ))}
 
-          <div className="flex items-center justify-between pt-2">
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 pt-2">
             <a
               href={selectedBrokerConfig.docsUrl}
               target="_blank"
@@ -217,7 +217,7 @@ export default function Settings() {
             <button
               type="submit"
               disabled={connecting}
-              className="px-6 py-2.5 bg-[var(--color-primary)] hover:bg-[var(--color-primary-dark)] text-black font-bold text-xs rounded-lg transition-colors flex items-center gap-2 shadow-md"
+              className="w-full sm:w-auto px-6 py-2.5 bg-[var(--color-primary)] hover:bg-[var(--color-primary-dark)] text-black font-bold text-xs rounded-lg transition-colors flex items-center justify-center gap-2 shadow-md"
             >
               <Key className="w-4 h-4" />
               <span>{connecting ? 'Validating...' : `Connect ${selectedBrokerConfig.name}`}</span>
@@ -240,9 +240,9 @@ export default function Settings() {
       </div>
 
       {/* DSRD Framework Preferences Card */}
-      <div className="bg-[var(--color-bg-card)] rounded-xl border border-[var(--color-border)] p-6 shadow-md space-y-5">
+      <div className="bg-[var(--color-bg-card)] rounded-xl border border-[var(--color-border)] p-4 sm:p-6 shadow-md space-y-4 sm:space-y-5">
         <div className="border-b border-[var(--color-border)] pb-4">
-          <h2 className="text-base font-bold text-white flex items-center gap-2">
+          <h2 className="text-sm sm:text-base font-bold text-white flex items-center gap-2">
             <Sliders className="w-5 h-5 text-[var(--color-primary)]" />
             DSRD Trading Preferences
           </h2>
@@ -334,14 +334,14 @@ export default function Settings() {
             />
           </div>
 
-          <div className="flex items-center justify-between pt-2">
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 pt-2">
             {prefMsg && (
               <span className="text-xs text-emerald-400 font-semibold">{prefMsg.text}</span>
             )}
             <button
               type="submit"
               disabled={savingPrefs}
-              className="ml-auto px-6 py-2.5 bg-[var(--color-primary)] hover:bg-[var(--color-primary-dark)] text-black font-bold text-xs rounded-lg transition-colors flex items-center gap-2 shadow-md"
+              className="w-full sm:w-auto sm:ml-auto px-6 py-2.5 bg-[var(--color-primary)] hover:bg-[var(--color-primary-dark)] text-black font-bold text-xs rounded-lg transition-colors flex items-center justify-center gap-2 shadow-md"
             >
               <Save className="w-4 h-4" />
               <span>{savingPrefs ? 'Saving...' : 'Save Preferences'}</span>

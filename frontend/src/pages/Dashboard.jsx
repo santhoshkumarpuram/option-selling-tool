@@ -126,31 +126,31 @@ export default function Dashboard() {
   const waitCount = stocks.filter(s => s.signal === 'Wait').length
 
   return (
-    <div className="p-6 max-w-7xl mx-auto space-y-6">
+    <div className="p-3.5 sm:p-6 max-w-7xl mx-auto space-y-4 sm:space-y-6">
       {/* Top Banner */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight text-white flex items-center gap-2">
+          <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-white flex items-center gap-2">
             Nifty 50 DSRD Scanner
           </h1>
-          <p className="text-sm text-[var(--color-text-secondary)] mt-1">
+          <p className="text-xs sm:text-sm text-[var(--color-text-secondary)] mt-0.5 sm:mt-1">
             Systematic high-probability option selling rules: Direction (RSI) → Support & Resistance → Delta (0.07-0.15)
           </p>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-3 self-end sm:self-auto">
           <button
             onClick={handleRefresh}
             disabled={refreshing}
-            className="flex items-center gap-2 px-4 py-2 bg-[var(--color-bg-card)] border border-[var(--color-border)] hover:bg-[var(--color-bg-card-hover)] text-sm font-medium rounded-lg text-white transition-colors"
+            className="flex items-center gap-2 px-3.5 sm:px-4 py-2 bg-[var(--color-bg-card)] border border-[var(--color-border)] hover:bg-[var(--color-bg-card-hover)] text-xs sm:text-sm font-medium rounded-lg text-white transition-colors"
           >
-            <RefreshCw className={clsx('w-4 h-4', refreshing && 'animate-spin')} />
+            <RefreshCw className={clsx('w-3.5 h-3.5 sm:w-4 sm:h-4', refreshing && 'animate-spin')} />
             <span>{refreshing ? 'Scanning...' : 'Refresh Scan'}</span>
           </button>
         </div>
       </div>
 
       {/* Market Sentiment Stats */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-2.5 sm:gap-4">
         <StatCard
           label="Strong / Pullback Bullish"
           count={bullishCount}
@@ -186,7 +186,7 @@ export default function Dashboard() {
       </div>
 
       {/* Search and Filters */}
-      <div className="flex flex-col md:flex-row gap-3 items-center justify-between">
+      <div className="flex flex-col md:flex-row gap-2.5 sm:gap-3 items-stretch md:items-center justify-between">
         <div className="relative w-full md:w-80">
           <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-[var(--color-text-secondary)]" />
           <input
@@ -198,15 +198,15 @@ export default function Dashboard() {
           />
         </div>
 
-        <div className="flex flex-wrap items-center gap-2 w-full md:w-auto">
-          {/* Signal Filter Chips */}
-          <div className="flex bg-[var(--color-bg-card)] border border-[var(--color-border)] rounded-lg p-1 text-xs">
+        <div className="flex flex-col sm:flex-row sm:flex-wrap items-stretch sm:items-center gap-2 w-full md:w-auto">
+          {/* Signal Filter Chips (Horizontal swipeable on mobile) */}
+          <div className="flex bg-[var(--color-bg-card)] border border-[var(--color-border)] rounded-lg p-1 text-xs overflow-x-auto no-scrollbar">
             {['ALL', 'BULLISH', 'BEARISH', 'SIDEWAYS', 'WAIT'].map(f => (
               <button
                 key={f}
                 onClick={() => setSignalFilter(f)}
                 className={clsx(
-                  'px-3 py-1 rounded font-medium transition-colors',
+                  'px-3 py-1 rounded font-medium transition-colors shrink-0',
                   signalFilter === f
                     ? 'bg-[var(--color-primary)] text-black font-semibold'
                     : 'text-[var(--color-text-secondary)] hover:text-white'
@@ -217,35 +217,40 @@ export default function Dashboard() {
             ))}
           </div>
 
-          {/* Sector select */}
-          <select
-            value={sectorFilter}
-            onChange={e => setSectorFilter(e.target.value)}
-            className="bg-[var(--color-bg-card)] border border-[var(--color-border)] rounded-lg px-3 py-1.5 text-xs text-white focus:outline-none focus:border-[var(--color-primary)]"
-          >
-            {sectors.map(s => (
-              <option key={s} value={s}>{s === 'ALL' ? 'All Sectors' : s}</option>
-            ))}
-          </select>
+          <div className="flex items-center gap-2">
+            {/* Sector select */}
+            <select
+              value={sectorFilter}
+              onChange={e => setSectorFilter(e.target.value)}
+              className="flex-1 sm:flex-none bg-[var(--color-bg-card)] border border-[var(--color-border)] rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-[var(--color-primary)]"
+            >
+              {sectors.map(s => (
+                <option key={s} value={s}>{s === 'ALL' ? 'All Sectors' : s}</option>
+              ))}
+            </select>
 
-          {/* Sweetspot Aligned Toggle */}
-          <button
-            onClick={() => setSweetspotOnly(prev => !prev)}
-            className={clsx(
-              'flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs font-semibold transition-all',
-              sweetspotOnly
-                ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/50 shadow-sm'
-                : 'bg-[var(--color-bg-card)] text-[var(--color-text-secondary)] border-[var(--color-border)] hover:text-white'
-            )}
-          >
-            <ShieldCheck className={clsx("w-3.5 h-3.5", sweetspotOnly ? "text-emerald-400" : "text-slate-400")} />
-            <span>Sweetspot Aligned Only (0.07–0.15Δ)</span>
-          </button>
+            {/* Sweetspot Aligned Toggle */}
+            <button
+              onClick={() => setSweetspotOnly(prev => !prev)}
+              className={clsx(
+                'flex items-center gap-1.5 px-3 py-2 rounded-lg border text-xs font-semibold transition-all shrink-0',
+                sweetspotOnly
+                  ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/50 shadow-sm'
+                  : 'bg-[var(--color-bg-card)] text-[var(--color-text-secondary)] border-[var(--color-border)] hover:text-white'
+              )}
+            >
+              <ShieldCheck className={clsx("w-3.5 h-3.5", sweetspotOnly ? "text-emerald-400" : "text-slate-400")} />
+              <span className="hidden sm:inline">Sweetspot Aligned Only (0.07–0.15Δ)</span>
+              <span className="sm:hidden">Safe 0.07–0.15Δ</span>
+            </button>
+          </div>
         </div>
       </div>
 
-      {/* Main Stock Table */}
-      <div className="bg-[var(--color-bg-card)] rounded-xl border border-[var(--color-border)] overflow-hidden shadow-lg">
+      {/* ======================================================== */}
+      {/* DESKTOP STOCK TABLE (Untouched, hidden on mobile < 768px)*/}
+      {/* ======================================================== */}
+      <div className="hidden md:block bg-[var(--color-bg-card)] rounded-xl border border-[var(--color-border)] overflow-hidden shadow-lg">
         <div className="overflow-x-auto">
           <table className="w-full text-left text-sm">
             <thead className="bg-[var(--color-bg-dark)]/60 text-[11px] font-semibold text-[var(--color-text-secondary)] uppercase tracking-wider border-b border-[var(--color-border)]">
@@ -356,6 +361,108 @@ export default function Dashboard() {
           </table>
         </div>
       </div>
+
+      {/* ======================================================== */}
+      {/* MOBILE STOCK CARDS VIEW (Only visible on screens < 768px)*/}
+      {/* ======================================================== */}
+      <div className="md:hidden space-y-3">
+        {loading ? (
+          <div className="py-12 text-center text-[var(--color-text-secondary)] bg-[var(--color-bg-card)] rounded-xl border border-[var(--color-border)] p-6">
+            <RefreshCw className="w-7 h-7 animate-spin text-[var(--color-primary)] mx-auto mb-2" />
+            <p className="text-sm font-medium text-white">Scanning Nifty 50 Universe...</p>
+            <p className="text-xs text-slate-400 mt-1">Calculating RSIs, Support/Resistance & Delta sweet spots</p>
+          </div>
+        ) : filteredStocks.length === 0 ? (
+          <div className="py-12 text-center text-xs text-[var(--color-text-secondary)] bg-[var(--color-bg-card)] rounded-xl border border-[var(--color-border)] p-6">
+            No stocks match your filter criteria.
+          </div>
+        ) : (
+          filteredStocks.map(stock => {
+            const style = signalStyles[stock.signal] || signalStyles['Wait']
+            const SigIcon = style.icon
+            const strat = strategyConfig[stock.strategy] || strategyConfig['wait']
+
+            return (
+              <div
+                key={stock.symbol}
+                className="bg-[var(--color-bg-card)] border border-[var(--color-border)] rounded-xl p-3.5 space-y-3 shadow-md"
+              >
+                {/* Header: Symbol & Sector on left, CMP on right */}
+                <div className="flex items-start justify-between">
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-lg font-black text-white tracking-tight">{stock.symbol}</span>
+                      <span className="text-[10px] px-1.5 py-0.5 rounded bg-slate-800 text-slate-400 font-medium border border-slate-700">
+                        {stock.sector}
+                      </span>
+                    </div>
+                    <div className="text-xs text-[var(--color-text-secondary)] mt-0.5">
+                      {stock.name || stock.symbol}
+                    </div>
+                  </div>
+
+                  <div className="text-right">
+                    <div className="text-[10px] uppercase tracking-wider text-slate-500 font-semibold">CMP</div>
+                    <div className="text-base font-mono font-black text-white">
+                      ₹{stock.cmp?.toLocaleString('en-IN', { minimumFractionDigits: 1, maximumFractionDigits: 2 })}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Signal & Strategy Badges */}
+                <div className="flex flex-wrap items-center gap-1.5 pt-0.5">
+                  <span className={clsx('inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold', style.badge)}>
+                    <SigIcon className="w-3.5 h-3.5 shrink-0" />
+                    <span>{stock.signal}</span>
+                  </span>
+                  <span className={clsx('px-2.5 py-1 rounded-md text-xs font-semibold', strat.color)}>
+                    {strat.label}
+                  </span>
+                </div>
+
+                {/* Technical Indicators: Weekly/Daily RSI & Track/Smoke */}
+                <div className="grid grid-cols-2 gap-2 text-xs">
+                  <div className="p-2 bg-[var(--color-bg-dark)]/90 rounded-lg border border-[var(--color-border)]">
+                    <div className="text-[10px] text-slate-400 font-medium">Weekly RSI</div>
+                    <div className="mt-1 flex items-center justify-between">
+                      <RSIBadge value={stock.weekly_rsi} />
+                      <span className="text-[10px] text-slate-500">{stock.weekly_rsi >= 60 ? 'Trend ↗' : stock.weekly_rsi <= 40 ? 'Trend ↘' : 'Range'}</span>
+                    </div>
+                  </div>
+
+                  <div className="p-2 bg-[var(--color-bg-dark)]/90 rounded-lg border border-[var(--color-border)]">
+                    <div className="text-[10px] text-slate-400 font-medium">Daily RSI</div>
+                    <div className="mt-1 flex items-center justify-between">
+                      <RSIBadge value={stock.daily_rsi} />
+                      <span className="text-[10px] text-slate-500">{stock.daily_rsi >= 60 ? 'Bullish' : stock.daily_rsi <= 40 ? 'Bearish' : 'Neutral'}</span>
+                    </div>
+                  </div>
+
+                  <div className="p-2 bg-[var(--color-bg-dark)]/90 rounded-lg border border-[var(--color-border)] col-span-2 flex items-center justify-between">
+                    <div>
+                      <div className="text-[10px] text-slate-400 font-medium mb-0.5">Railway Track (0.07-0.15Δ)</div>
+                      <TrackAlignmentPill status={stock.track_status} safe={stock.track_safe} />
+                    </div>
+                    <div className="text-right">
+                      <div className="text-[10px] text-slate-400 font-medium mb-0.5">Smoke Risk</div>
+                      <SmokePill score={stock.smoke_score || 0} />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Analyze Full Button */}
+                <Link
+                  to={`/analysis/${stock.symbol}`}
+                  className="w-full py-2.5 px-4 bg-[var(--color-primary)] hover:bg-[var(--color-primary-dark)] text-black font-bold text-xs rounded-lg transition-colors flex items-center justify-center gap-1.5 shadow"
+                >
+                  <span>Analyze Setup & Build Trade</span>
+                  <ChevronRight className="w-4 h-4" />
+                </Link>
+              </div>
+            )
+          })
+        )}
+      </div>
     </div>
   )
 }
@@ -365,14 +472,14 @@ function StatCard({ label, count, subtitle, color, onClick, active }) {
     <button
       onClick={onClick}
       className={clsx(
-        'text-left p-4 rounded-xl border transition-all duration-150',
+        'text-left p-3 sm:p-4 rounded-xl border transition-all duration-150',
         color,
         active ? 'ring-2 ring-[var(--color-primary)]' : 'hover:border-opacity-60'
       )}
     >
-      <div className="text-xs font-medium uppercase tracking-wider opacity-80">{label}</div>
-      <div className="text-2xl font-bold mt-1 mb-0.5">{count}</div>
-      <div className="text-[11px] opacity-70 truncate">{subtitle}</div>
+      <div className="text-[10px] sm:text-xs font-medium uppercase tracking-wider opacity-80 leading-tight">{label}</div>
+      <div className="text-xl sm:text-2xl font-bold mt-1 mb-0.5">{count}</div>
+      <div className="text-[10px] sm:text-[11px] opacity-70 truncate">{subtitle}</div>
     </button>
   )
 }

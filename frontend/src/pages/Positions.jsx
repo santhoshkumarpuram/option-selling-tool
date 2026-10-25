@@ -54,23 +54,23 @@ export default function Positions() {
   const monthlyRoi = totalMargin > 0 ? ((totalPnl / totalMargin) * 100).toFixed(2) : '0.00'
 
   return (
-    <div className="p-6 max-w-7xl mx-auto space-y-6">
+    <div className="p-3.5 sm:p-6 max-w-7xl mx-auto space-y-4 sm:space-y-6">
       {/* Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight text-white">Positions & P&L Tracker</h1>
-          <p className="text-sm text-slate-400 mt-0.5">
+          <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-white">Positions & P&L Tracker</h1>
+          <p className="text-xs sm:text-sm text-slate-400 mt-0.5">
             Real & Paper trades with live Smoke Detector monitoring & Stop-Loss alerts
           </p>
         </div>
 
-        <div className="flex bg-[var(--color-bg-card)] border border-[var(--color-border)] p-1 rounded-xl text-xs font-semibold">
+        <div className="flex bg-[var(--color-bg-card)] border border-[var(--color-border)] p-1 rounded-xl text-xs font-semibold self-start sm:self-auto">
           {['open', 'closed', 'all'].map(t => (
             <button
               key={t}
               onClick={() => setFilter(t)}
               className={clsx(
-                'px-4 py-1.5 rounded-lg capitalize transition-colors',
+                'px-3 sm:px-4 py-1.5 rounded-lg capitalize transition-colors',
                 filter === t
                   ? 'bg-[var(--color-primary)] text-black'
                   : 'text-slate-400 hover:text-white'
@@ -83,7 +83,7 @@ export default function Positions() {
       </div>
 
       {/* Portfolio Performance Banner (Like Kathuria's Tool) */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 bg-[var(--color-bg-card)] border border-[var(--color-border)] p-4 rounded-xl shadow-lg">
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2 sm:gap-3 bg-[var(--color-bg-card)] border border-[var(--color-border)] p-3 sm:p-4 rounded-xl shadow-lg">
         <SummaryItem label="Open Lots" value={`${totalOpenLots} Lots`} color="text-amber-400" />
         <SummaryItem label="Margin Used" value={`₹${totalMargin.toLocaleString('en-IN')}`} />
         <SummaryItem label="Realised P&L" value={`₹${totalRealized.toLocaleString('en-IN')}`} color={totalRealized >= 0 ? 'text-emerald-400' : 'text-rose-400'} />
@@ -112,11 +112,11 @@ export default function Positions() {
           positions.map((pos, idx) => (
             <div
               key={pos.id || idx}
-              className="bg-[var(--color-bg-card)] rounded-xl border border-[var(--color-border)] p-5 shadow-md space-y-4 hover:border-slate-700 transition-colors"
+              className="bg-[var(--color-bg-card)] rounded-xl border border-[var(--color-border)] p-4 sm:p-5 shadow-md space-y-3.5 sm:space-y-4 hover:border-slate-700 transition-colors"
             >
               {/* Top row */}
-              <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[var(--color-border)] pb-3">
-                <div className="flex flex-wrap items-center gap-3">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-[var(--color-border)] pb-3">
+                <div className="flex flex-wrap items-center gap-2 sm:gap-3">
                   <span className="text-lg font-black text-white">{pos.symbol}</span>
                   <span
                     className={clsx(
@@ -146,7 +146,7 @@ export default function Positions() {
                   </span>
                 </div>
 
-                <div className="flex items-center gap-4">
+                <div className="flex items-center justify-between sm:justify-end gap-3 sm:gap-4 pt-1 sm:pt-0">
                   <div className="flex items-center gap-1.5 text-xs font-semibold">
                     {(pos.smoke_score || 0) >= 2 ? (
                       <span className="text-rose-400 flex items-center gap-1 bg-rose-500/15 px-2 py-0.5 rounded-full border border-rose-500/30">
@@ -171,7 +171,7 @@ export default function Positions() {
               </div>
 
               {/* Stats Grid with No. of Lots included */}
-              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-7 gap-3 text-xs">
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-7 gap-2 sm:gap-3 text-xs">
                 <MiniCard
                   label="No. of Lots"
                   value={`${pos.lots || 1} Lot${(pos.lots || 1) > 1 ? 's' : ''}`}

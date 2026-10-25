@@ -171,9 +171,9 @@ export default function Analysis() {
   const distToSup = (((cmp - nearestSup) / cmp) * 100).toFixed(1)
 
   return (
-    <div className="p-6 max-w-7xl mx-auto space-y-6">
+    <div className="p-3.5 sm:p-6 max-w-7xl mx-auto space-y-4 sm:space-y-6">
       {/* Top Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-[var(--color-border)] pb-4">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4 border-b border-[var(--color-border)] pb-4">
         <div className="flex items-center gap-3">
           <Link
             to="/"
@@ -183,7 +183,7 @@ export default function Analysis() {
           </Link>
           <div>
             <div className="flex items-center gap-2">
-              <h1 className="text-2xl font-black text-white tracking-tight">{data.symbol}</h1>
+              <h1 className="text-xl sm:text-2xl font-black text-white tracking-tight">{data.symbol}</h1>
               <span className="text-xs px-2 py-0.5 rounded bg-slate-800 text-slate-400 border border-slate-700 font-medium">
                 {data.sector}
               </span>
@@ -192,16 +192,16 @@ export default function Analysis() {
           </div>
         </div>
 
-        <div className="flex items-center gap-6">
-          <div className="text-right">
-            <div className="text-[11px] uppercase tracking-wider text-slate-400 font-semibold">Current Price (CMP)</div>
-            <div className="text-2xl font-mono font-black text-white">
+        <div className="flex items-center justify-between sm:justify-end gap-4 sm:gap-6 pt-2 sm:pt-0 border-t sm:border-t-0 border-[var(--color-border)]">
+          <div className="text-left sm:text-right">
+            <div className="text-[10px] sm:text-[11px] uppercase tracking-wider text-slate-400 font-semibold">Current Price (CMP)</div>
+            <div className="text-xl sm:text-2xl font-mono font-black text-white">
               ₹{cmp.toLocaleString('en-IN', { minimumFractionDigits: 1, maximumFractionDigits: 2 })}
             </div>
           </div>
 
-          <div className="text-right border-l border-[var(--color-border)] pl-6">
-            <div className="text-[11px] uppercase tracking-wider text-slate-400 font-semibold">DSRD Verdict</div>
+          <div className="text-right sm:border-l sm:border-[var(--color-border)] sm:pl-6">
+            <div className="text-[10px] sm:text-[11px] uppercase tracking-wider text-slate-400 font-semibold">DSRD Verdict</div>
             <span
               className={clsx(
                 'inline-block px-3 py-1 rounded-full text-xs font-bold mt-0.5',
@@ -332,7 +332,7 @@ export default function Analysis() {
                 <div
                   key={idx}
                   className={clsx(
-                    'flex items-center justify-between p-2.5 rounded-lg border text-xs transition-colors',
+                    'flex flex-wrap sm:flex-nowrap items-center justify-between gap-2 p-2.5 rounded-lg border text-xs transition-colors',
                     s.aligned
                       ? 'bg-emerald-500/5 border-emerald-500/25 hover:bg-emerald-500/10'
                       : 'bg-rose-500/5 border-rose-500/25 hover:bg-rose-500/10'
@@ -345,12 +345,12 @@ export default function Analysis() {
                     <span className="font-bold text-white text-sm">₹{s.strike}</span>
                   </div>
 
-                  <div className="flex items-center gap-4">
+                  <div className="flex items-center gap-2.5 sm:gap-4 flex-wrap">
                     <span className="text-slate-300">Δ {s.delta.toFixed(2)}</span>
                     <span className="font-mono text-white font-semibold">₹{s.premium.toFixed(2)}</span>
                     <span className={clsx('flex items-center gap-1 font-semibold text-[11px] px-2 py-0.5 rounded-full', s.aligned ? 'bg-emerald-500/20 text-emerald-300' : 'bg-rose-500/20 text-rose-300')}>
                       {s.aligned ? <CheckCircle2 className="w-3.5 h-3.5" /> : <XCircle className="w-3.5 h-3.5" />}
-                      {s.aligned ? 'Safe (Outside Track)' : 'Inside Track (Avoid)'}
+                      <span>{s.aligned ? 'Safe (Outside Track)' : 'Inside Track (Avoid)'}</span>
                     </span>
                   </div>
                 </div>
@@ -525,8 +525,8 @@ export default function Analysis() {
         )}
 
         {/* Inputs row: Lots and Stop Loss */}
-        <div className="flex flex-wrap items-center gap-6 p-4 bg-[var(--color-bg-dark)]/80 rounded-xl border border-[var(--color-border)]">
-          <div className="flex items-center gap-3">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-3.5 sm:p-4 bg-[var(--color-bg-dark)]/80 rounded-xl border border-[var(--color-border)]">
+          <div className="flex items-center justify-between sm:justify-start gap-3">
             <label className="text-xs font-semibold text-slate-300 uppercase tracking-wider">Number of Lots:</label>
             <div className="flex items-center gap-2">
               <button
@@ -548,7 +548,7 @@ export default function Analysis() {
             </span>
           </div>
 
-          <div className="flex items-center gap-3 border-l border-[var(--color-border)] pl-6">
+          <div className="flex items-center justify-between sm:justify-start gap-3 border-t sm:border-t-0 sm:border-l border-[var(--color-border)] pt-3 sm:pt-0 sm:pl-6">
             <label className="text-xs font-semibold text-slate-300 uppercase tracking-wider">Stop Loss Rule:</label>
             <div className="flex bg-slate-900 rounded-lg p-0.5 border border-slate-700 text-xs">
               {['1:1', '1:2', '1:3'].map(rule => (
@@ -594,7 +594,7 @@ export default function Analysis() {
 
         {/* Payoff Key Performance Metrics */}
         {tradePlan && (
-          <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-3">
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-7 gap-2.5 sm:gap-3">
             <MetricCard
               label="Net Credit"
               value={`₹${tradePlan.net_credit_per_share?.toFixed(2)}`}
@@ -642,8 +642,8 @@ export default function Analysis() {
 
         {/* Option Legs Breakdown Table */}
         {tradePlan?.legs && (
-          <div className="border border-[var(--color-border)] rounded-xl overflow-hidden">
-            <table className="w-full text-left text-xs">
+          <div className="border border-[var(--color-border)] rounded-xl overflow-x-auto">
+            <table className="w-full text-left text-xs min-w-[500px] sm:min-w-0">
               <thead className="bg-[var(--color-bg-dark)]/80 text-slate-400 font-semibold uppercase tracking-wider border-b border-[var(--color-border)]">
                 <tr>
                   <th className="py-2.5 px-4">Action</th>
@@ -677,7 +677,7 @@ export default function Analysis() {
         )}
 
         {/* Execution Buttons */}
-        <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-2">
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 pt-2">
           <div className="flex items-center gap-2 mr-auto">
             {(() => {
               const now = new Date()
@@ -709,7 +709,7 @@ export default function Analysis() {
             )}
           </div>
 
-          <div className="flex items-center gap-3 w-full sm:w-auto">
+          <div className="flex flex-col sm:flex-row items-stretch gap-2.5 w-full sm:w-auto">
             <button
               onClick={() => handleExecuteOrder(true)}
               className="w-full sm:w-auto px-5 py-2.5 rounded-xl text-sm font-bold bg-slate-800 hover:bg-slate-700 text-white border border-slate-600 transition-colors flex items-center justify-center gap-2 shadow"
