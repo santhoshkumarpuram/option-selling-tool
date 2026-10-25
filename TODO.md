@@ -1,3 +1,5 @@
+Last updated: 2026-10-25 by Antigravity — Moved completed mobile UI and async scanner tasks to Done section; added real-time WebSocket & alert tasks.
+
 # 📋 Option Selling Tool — Project Roadmap & TODO List
 
 ---
@@ -20,8 +22,7 @@ Planned architecture to support multiple concurrent users (e.g. 5+ traders), eac
 - [ ] **Database Concurrency:** Enable SQLite WAL (Write-Ahead Logging) mode or prepare migration scripts for PostgreSQL to handle concurrent writes from multiple active sessions without database locking.
 
 ### 3. Shared Market Data & Scanner Optimization
-- [ ] **Centralized Background Scanner:** Decouple market data scanning from individual user requests.
-- [ ] **In-Memory Caching:** Calculate DSRD universe scans (RSI, S/R pivots, divergence, smoke detectors) once every 1–3 minutes in a background worker and serve cached results instantly to all users with minimal CPU & memory usage.
+- [ ] **Centralized Background Scanner:** Decouple market data scanning from individual user requests into a standing periodic job.
 - [ ] **Broker API Rate Limit Guard:** Ensure multiple users requesting option chains do not exceed broker API rate limits.
 
 ### 4. Frontend Multi-User UI
@@ -37,3 +38,16 @@ Planned architecture to support multiple concurrent users (e.g. 5+ traders), eac
 - [ ] **Automated Stop-Loss Trailing:** Background task to trigger auto-exit when short strike or 1:2 net credit loss threshold is breached.
 - [ ] **Telegram / WhatsApp Alerts:** Instant notification when DSRD smoke detectors score 2/3 or 3/3 on active positions.
 - [ ] **Trade Journal Export:** CSV / Excel export of closed positions for tax and performance auditing.
+- [ ] **WebSocket Live Price Feeds:** Real-time spot price tick updates during active market hours (09:15–15:30 IST) to replace manual polling.
+
+---
+
+## ✅ Completed / Done
+
+- [x] **Mobile Responsive UI:** Built dedicated smartphone card layout, bottom sticky navigation, swipeable sentiment filter bar, and safe-area padding while preserving desktop 9-column matrix and sidebar.
+- [x] **Asynchronous Multithreaded Scanner:** Rebuilt scanner with `asyncio.gather` bounded by `asyncio.Semaphore(12)`, cutting scan duration from >60s to ~11s.
+- [x] **Direct Market Data Integration:** Eliminated flaky `yfinance` scraper and implemented direct `httpx.AsyncClient` Yahoo Finance v8 chart API with browser headers.
+- [x] **In-Memory Caching:** Implemented 300s TTL cache in `backend/services/ta_engine.py` for sub-millisecond cached scanner responses.
+- [x] **Elimination of Silent Mock Data:** Removed synthetic `generate_fallback` data from backend to ensure data honesty and user trust.
+- [x] **Transparent Live Status & Timestamp UI:** Added `"● Live Market Data"` badge, offline warning banner, and `"Last refreshed: HH:MM:SS"` display on the dashboard.
+- [x] **Tata Motors Demerger Ticker Fix:** Updated symbol resolution from deprecated `TATAMOTORS.NS` to active `TMPV.NS`.
