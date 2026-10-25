@@ -11,6 +11,7 @@ import time
 import math
 import numpy as np
 import pandas as pd
+import httpx
 import yfinance as yf
 from typing import Dict, Any, List, Optional, Tuple
 from config import NIFTY50_STOCKS, INDEX_INSTRUMENTS
@@ -20,6 +21,26 @@ from config import NIFTY50_STOCKS, INDEX_INSTRUMENTS
 _TA_CACHE: Dict[str, Tuple[float, Dict[str, Any]]] = {}
 _CACHE_EXPIRY_SECONDS = 300  # 5 minutes
 
+# Browser User-Agent header so direct Yahoo Finance API calls succeed reliably on Linux/Raspberry Pi
+_HTTP_HEADERS = {
+    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
+    "Accept": "application/json",
+    "Accept-Language": "en-US,en;q=0.9",
+}
+
+_CLIENT: Optional[httpx.AsyncClient] = None
+
+
+def _get_http_client() -> httpx.AsyncClient:
+    global _CLIENT
+    if _CLIENT is None or _CLIENT.is_closed:
+        _CLIENT = httpx.AsyncClient(
+            headers=_HTTP_HEADERS,
+            timeout=15.0,
+            follow_redirects=True,
+        )
+    return _CLIENT
+
 
 def _get_ticker_symbol(symbol: str) -> str:
     sym = symbol.upper().strip()
@@ -27,6 +48,8 @@ def _get_ticker_symbol(symbol: str) -> str:
         return "^NSEI"
     if sym in ("BANKNIFTY", "BANK NIFTY"):
         return "^NSEBANK"
+    if sym == "TATAMOTORS":
+        return "TMPV.NS"
     if not sym.endswith(".NS") and not sym.startswith("^"):
         return f"{sym}.NS"
     return sym
@@ -170,112 +193,126 @@ def evaluate_dsrd_direction(weekly_rsi: float, daily_rsi: float) -> Tuple[str, s
     return "Wait", "wait"
 
 
-def _fetch_stock_ta_sync(symbol: str) -> Dict[str, Any]:
-    """Synchronous worker that downloads historical candle data and calculates DSRD indicators."""
-    sym_upper = symbol.upper().strip()
-    ticker_sym = _get_ticker_symbol(sym_upper)
-
-    # Quick synthetic fallback for testing / if offline
-    def generate_fallback():
-        stock_info = NIFTY50_STOCKS.get(sym_upper, INDEX_INSTRUMENTS.get(sym_upper, {"name": sym_upper, "sector": "LargeCap"}))
-        cmp_map = {
-            "RELIANCE": 1285.0, "TCS": 3850.0, "HDFCBANK": 1780.0, "INFY": 1580.0,
-            "ICICIBANK": 1340.0, "SBIN": 960.0, "BHARTIARTL": 1690.0, "ITC": 470.0,
-            "NIFTY": 24800.0, "BANKNIFTY": 52500.0
-        }
-        cmp = cmp_map.get(sym_upper, 1500.0)
-        w_rsi = 58.5
-        d_rsi = 54.2
-        sig, strat = evaluate_dsrd_direction(w_rsi, d_rsi)
-        return {
-            "symbol": sym_upper,
-            "name": stock_info.get("name", sym_upper),
-            "sector": stock_info.get("sector", "LargeCap"),
-            "cmp": cmp,
-            "weekly_rsi": w_rsi,
-            "daily_rsi": d_rsi,
-            "weekly_zone": "Neutral",
-            "daily_zone": "Neutral",
-            "signal": sig,
-            "strategy": strat,
-            "support_levels": [
-                {"price": round(cmp * 0.94, 2), "timeframe": "D+W", "touches": 4, "level_type": "support"},
-                {"price": round(cmp * 0.90, 2), "timeframe": "D+W+M", "touches": 7, "level_type": "support"},
-            ],
-            "resistance_levels": [
-                {"price": round(cmp * 1.06, 2), "timeframe": "D+W", "touches": 3, "level_type": "resistance"},
-                {"price": round(cmp * 1.10, 2), "timeframe": "D+W+M", "touches": 6, "level_type": "resistance"},
-            ]
-        }
-
+async def _fetch_chart_data(ticker_sym: str) -> Optional[pd.DataFrame]:
+    """Fetch 2-year daily OHLC data directly from Yahoo Finance v8 chart API."""
+    client = _get_http_client()
+    url = f"https://query1.finance.yahoo.com/v8/finance/chart/{ticker_sym}?range=2y&interval=1d"
     try:
-        # Download daily historical data (2 years) in ONE single request
-        ticker = yf.Ticker(ticker_sym)
-        df_daily = ticker.history(period="2y", interval="1d")
-        if df_daily.empty or len(df_daily) < 30:
-            return generate_fallback()
-
-        cmp = round(float(df_daily['Close'].iloc[-1]), 2)
-
-        # Daily RSI
-        rsi_daily_series = calculate_rsi(df_daily['Close'], period=14)
-        daily_rsi = round(float(rsi_daily_series.iloc[-1]), 1)
-
-        # Weekly candles resampled from daily (standard Friday close - 0 extra network calls!)
-        try:
-            df_weekly = df_daily['Close'].resample('W-FRI').last().dropna()
-            if len(df_weekly) >= 15:
-                rsi_weekly_series = calculate_rsi(df_weekly, period=14)
-                weekly_rsi = round(float(rsi_weekly_series.iloc[-1]), 1)
-            else:
-                weekly_rsi = daily_rsi
-        except Exception:
-            weekly_rsi = daily_rsi
-
-        # Zones
-        w_zone = "Bullish" if weekly_rsi >= 60 else ("Bearish" if weekly_rsi <= 40 else "Neutral")
-        d_zone = "Bullish" if daily_rsi >= 60 else ("Bearish" if daily_rsi <= 40 else "Neutral")
-
-        # DSRD verdict
-        signal, strategy = evaluate_dsrd_direction(weekly_rsi, daily_rsi)
-
-        # S/R levels
-        support, resistance = detect_sr_levels(df_daily)
-
-        stock_info = NIFTY50_STOCKS.get(sym_upper, INDEX_INSTRUMENTS.get(sym_upper, {"name": sym_upper, "sector": "Equity"}))
-
-        return {
-            "symbol": sym_upper,
-            "name": stock_info.get("name", sym_upper),
-            "sector": stock_info.get("sector", "Equity"),
-            "cmp": cmp,
-            "weekly_rsi": weekly_rsi,
-            "daily_rsi": daily_rsi,
-            "weekly_zone": w_zone,
-            "daily_zone": d_zone,
-            "signal": signal,
-            "strategy": strategy,
-            "support_levels": support,
-            "resistance_levels": resistance,
-            "_df_daily": df_daily  # cached for smoke detector
-        }
-
+        r = await client.get(url)
+        if r.status_code == 200:
+            data = r.json()
+            result = data.get("chart", {}).get("result", [])
+            if result:
+                res = result[0]
+                timestamps = res.get("timestamp")
+                quote = res.get("indicators", {}).get("quote", [{}])[0]
+                if timestamps and quote.get("close"):
+                    df = pd.DataFrame({
+                        "Open": quote.get("open", []),
+                        "High": quote.get("high", []),
+                        "Low": quote.get("low", []),
+                        "Close": quote.get("close", []),
+                        "Volume": quote.get("volume", [0] * len(timestamps))
+                    }, index=pd.to_datetime(timestamps, unit="s"))
+                    df = df.dropna(subset=["Close"])
+                    if len(df) >= 30:
+                        return df
     except Exception as e:
-        print(f"Error fetching TA for {symbol}: {e}")
-        return generate_fallback()
+        print(f"Direct Yahoo API fetch error for {ticker_sym}: {e}")
+
+    # Backup: try yfinance in thread only if direct API failed
+    try:
+        def _yf_sync():
+            ticker = yf.Ticker(ticker_sym)
+            return ticker.history(period="2y", interval="1d")
+        df_yf = await asyncio.to_thread(_yf_sync)
+        if df_yf is not None and not df_yf.empty and len(df_yf) >= 30:
+            return df_yf
+    except Exception as e:
+        print(f"yfinance backup also failed for {ticker_sym}: {e}")
+
+    return None
 
 
 async def fetch_stock_ta(symbol: str, force_refresh: bool = False) -> Dict[str, Any]:
-    """Asynchronously fetch stock TA in a background thread with caching."""
+    """Fetch stock technical analysis with caching.
+    
+    Uses direct asynchronous Yahoo Finance chart API with realistic browser headers,
+    guaranteeing reliable live data on Linux/Raspberry Pi without fake fallbacks.
+    """
     sym_upper = symbol.upper().strip()
     now = time.time()
 
     if not force_refresh and sym_upper in _TA_CACHE:
         ts, cached_data = _TA_CACHE[sym_upper]
         if now - ts < _CACHE_EXPIRY_SECONDS:
-            return cached_data
+            return dict(cached_data)
 
-    # Execute synchronous I/O in worker thread so event loop never blocks
-    data = await asyncio.to_thread(_fetch_stock_ta_sync, sym_upper)
+    ticker_sym = _get_ticker_symbol(sym_upper)
+    df_daily = await _fetch_chart_data(ticker_sym)
+
+    stock_info = NIFTY50_STOCKS.get(sym_upper, INDEX_INSTRUMENTS.get(sym_upper, {"name": sym_upper, "sector": "Equity"}))
+
+    if df_daily is None or len(df_daily) < 30:
+        # Honest status: never return fake RSI or fake CMP that masks errors
+        return {
+            "symbol": sym_upper,
+            "name": stock_info.get("name", sym_upper),
+            "sector": stock_info.get("sector", "Equity"),
+            "cmp": None,
+            "weekly_rsi": None,
+            "daily_rsi": None,
+            "weekly_zone": "—",
+            "daily_zone": "—",
+            "signal": "No Data",
+            "strategy": "wait",
+            "support_levels": [],
+            "resistance_levels": [],
+            "error": "Market data temporarily unavailable",
+        }
+
+    cmp = round(float(df_daily["Close"].iloc[-1]), 2)
+
+    # Daily Wilder's RSI
+    rsi_daily_series = calculate_rsi(df_daily["Close"], period=14)
+    daily_rsi = round(float(rsi_daily_series.iloc[-1]), 1)
+
+    # Weekly candles resampled from daily (standard Friday close - 0 extra network calls!)
+    try:
+        df_weekly = df_daily["Close"].resample("W-FRI").last().dropna()
+        if len(df_weekly) >= 15:
+            rsi_weekly_series = calculate_rsi(df_weekly, period=14)
+            weekly_rsi = round(float(rsi_weekly_series.iloc[-1]), 1)
+        else:
+            weekly_rsi = daily_rsi
+    except Exception:
+        weekly_rsi = daily_rsi
+
+    # Zones
+    w_zone = "Bullish" if weekly_rsi >= 60 else ("Bearish" if weekly_rsi <= 40 else "Neutral")
+    d_zone = "Bullish" if daily_rsi >= 60 else ("Bearish" if daily_rsi <= 40 else "Neutral")
+
+    # DSRD verdict
+    signal, strategy = evaluate_dsrd_direction(weekly_rsi, daily_rsi)
+
+    # S/R levels
+    support, resistance = detect_sr_levels(df_daily)
+
+    data = {
+        "symbol": sym_upper,
+        "name": stock_info.get("name", sym_upper),
+        "sector": stock_info.get("sector", "Equity"),
+        "cmp": cmp,
+        "weekly_rsi": weekly_rsi,
+        "daily_rsi": daily_rsi,
+        "weekly_zone": w_zone,
+        "daily_zone": d_zone,
+        "signal": signal,
+        "strategy": strategy,
+        "support_levels": support,
+        "resistance_levels": resistance,
+        "_df_daily": df_daily  # passed to smoke detector
+    }
+
     _TA_CACHE[sym_upper] = (now, data)
-    return data
+    return dict(data)
