@@ -6,6 +6,8 @@ Calculates:
 3. Strike alignment checking (ensuring strikes lie outside the tracks).
 """
 
+import asyncio
+import time
 import math
 import numpy as np
 import pandas as pd
@@ -14,8 +16,8 @@ from typing import Dict, Any, List, Optional, Tuple
 from config import NIFTY50_STOCKS, INDEX_INSTRUMENTS
 
 
-# Cache in-memory to prevent rate-limits / slow loads
-_TA_CACHE: Dict[str, Dict[str, Any]] = {}
+# Cache in-memory to prevent rate-limits / slow loads: sym -> (timestamp, data)
+_TA_CACHE: Dict[str, Tuple[float, Dict[str, Any]]] = {}
 _CACHE_EXPIRY_SECONDS = 300  # 5 minutes
 
 
@@ -168,8 +170,8 @@ def evaluate_dsrd_direction(weekly_rsi: float, daily_rsi: float) -> Tuple[str, s
     return "Wait", "wait"
 
 
-async def fetch_stock_ta(symbol: str) -> Dict[str, Any]:
-    """Fetch daily & weekly candles for symbol, calculate RSIs, S/R levels and DSRD verdict."""
+def _fetch_stock_ta_sync(symbol: str) -> Dict[str, Any]:
+    """Synchronous worker that downloads historical candle data and calculates DSRD indicators."""
     sym_upper = symbol.upper().strip()
     ticker_sym = _get_ticker_symbol(sym_upper)
 
@@ -207,9 +209,9 @@ async def fetch_stock_ta(symbol: str) -> Dict[str, Any]:
         }
 
     try:
-        # Download daily historical data (1 year)
+        # Download daily historical data (2 years) in ONE single request
         ticker = yf.Ticker(ticker_sym)
-        df_daily = ticker.history(period="1y", interval="1d")
+        df_daily = ticker.history(period="2y", interval="1d")
         if df_daily.empty or len(df_daily) < 30:
             return generate_fallback()
 
@@ -219,12 +221,15 @@ async def fetch_stock_ta(symbol: str) -> Dict[str, Any]:
         rsi_daily_series = calculate_rsi(df_daily['Close'], period=14)
         daily_rsi = round(float(rsi_daily_series.iloc[-1]), 1)
 
-        # Weekly candles resampled or downloaded
-        df_weekly = ticker.history(period="2y", interval="1wk")
-        if not df_weekly.empty and len(df_weekly) >= 15:
-            rsi_weekly_series = calculate_rsi(df_weekly['Close'], period=14)
-            weekly_rsi = round(float(rsi_weekly_series.iloc[-1]), 1)
-        else:
+        # Weekly candles resampled from daily (standard Friday close - 0 extra network calls!)
+        try:
+            df_weekly = df_daily['Close'].resample('W-FRI').last().dropna()
+            if len(df_weekly) >= 15:
+                rsi_weekly_series = calculate_rsi(df_weekly, period=14)
+                weekly_rsi = round(float(rsi_weekly_series.iloc[-1]), 1)
+            else:
+                weekly_rsi = daily_rsi
+        except Exception:
             weekly_rsi = daily_rsi
 
         # Zones
@@ -258,3 +263,19 @@ async def fetch_stock_ta(symbol: str) -> Dict[str, Any]:
     except Exception as e:
         print(f"Error fetching TA for {symbol}: {e}")
         return generate_fallback()
+
+
+async def fetch_stock_ta(symbol: str, force_refresh: bool = False) -> Dict[str, Any]:
+    """Asynchronously fetch stock TA in a background thread with caching."""
+    sym_upper = symbol.upper().strip()
+    now = time.time()
+
+    if not force_refresh and sym_upper in _TA_CACHE:
+        ts, cached_data = _TA_CACHE[sym_upper]
+        if now - ts < _CACHE_EXPIRY_SECONDS:
+            return cached_data
+
+    # Execute synchronous I/O in worker thread so event loop never blocks
+    data = await asyncio.to_thread(_fetch_stock_ta_sync, sym_upper)
+    _TA_CACHE[sym_upper] = (now, data)
+    return data

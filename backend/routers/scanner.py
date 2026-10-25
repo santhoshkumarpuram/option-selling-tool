@@ -1,7 +1,7 @@
 """Stock Scanner Router implementing Sanjay Kathuria's Nifty 50 DSRD scan."""
 
 import asyncio
-from fastapi import APIRouter
+from fastapi import APIRouter, Response
 from typing import List, Dict, Any
 from config import NIFTY50_STOCKS, INDEX_INSTRUMENTS
 from services.ta_engine import fetch_stock_ta
@@ -14,8 +14,8 @@ _SCANNER_CACHE: List[Dict[str, Any]] = []
 _SCANNER_TIMESTAMP = 0.0
 
 
-async def _scan_single_stock(symbol: str, info: Dict[str, str]) -> Dict[str, Any]:
-    ta = await fetch_stock_ta(symbol)
+async def _scan_single_stock(symbol: str, info: Dict[str, str], force_refresh: bool = False) -> Dict[str, Any]:
+    ta = await fetch_stock_ta(symbol, force_refresh=force_refresh)
     df_daily = ta.pop("_df_daily", None)
     cmp = ta.get("cmp")
     strategy = ta.get("strategy", "wait")
@@ -89,42 +89,56 @@ async def _scan_single_stock(symbol: str, info: Dict[str, str]) -> Dict[str, Any
 
 
 @router.get("", response_model=List[Dict[str, Any]])
-async def get_scanner_results():
-    """Scan Nifty 50 stocks + indices and return DSRD status and strategy."""
+async def get_scanner_results(response: Response = None):
+    """Scan Nifty 50 stocks + indices using asynchronous multithreading."""
     import time
     global _SCANNER_CACHE, _SCANNER_TIMESTAMP
 
     # Return cached results if fresher than 180 seconds
     if _SCANNER_CACHE and (time.time() - _SCANNER_TIMESTAMP < 180):
+        if response:
+            response.headers["X-Last-Refreshed"] = str(int(_SCANNER_TIMESTAMP))
         return _SCANNER_CACHE
 
-    tasks = []
-    # Index instruments first
-    for sym, info in INDEX_INSTRUMENTS.items():
-        tasks.append(_scan_single_stock(sym, info))
+    all_instruments = {**INDEX_INSTRUMENTS, **NIFTY50_STOCKS}
+    sem = asyncio.Semaphore(12)  # up to 12 parallel threads
 
-    # Nifty 50 stocks
-    for sym, info in NIFTY50_STOCKS.items():
-        tasks.append(_scan_single_stock(sym, info))
+    async def _scan_worker(sym: str, info: Dict[str, str]):
+        async with sem:
+            return await _scan_single_stock(sym, info, force_refresh=False)
 
-    # Run in parallel batches of 10 to avoid socket saturation
-    results = []
-    batch_size = 10
-    for i in range(0, len(tasks), batch_size):
-        batch = tasks[i : i + batch_size]
-        batch_results = await asyncio.gather(*batch, return_exceptions=True)
-        for res in batch_results:
-            if isinstance(res, dict):
-                results.append(res)
+    tasks = [_scan_worker(sym, info) for sym, info in all_instruments.items()]
+    batch_results = await asyncio.gather(*tasks, return_exceptions=True)
+
+    results = [res for res in batch_results if isinstance(res, dict)]
 
     _SCANNER_CACHE = results
     _SCANNER_TIMESTAMP = time.time()
+    if response:
+        response.headers["X-Last-Refreshed"] = str(int(_SCANNER_TIMESTAMP))
     return results
 
 
 @router.post("/refresh")
-async def refresh_scanner():
-    """Force refresh of the scanner."""
-    global _SCANNER_TIMESTAMP
-    _SCANNER_TIMESTAMP = 0.0
-    return await get_scanner_results()
+async def refresh_scanner(response: Response = None):
+    """Force fresh scan of all stocks using multithreading."""
+    import time
+    global _SCANNER_CACHE, _SCANNER_TIMESTAMP
+
+    all_instruments = {**INDEX_INSTRUMENTS, **NIFTY50_STOCKS}
+    sem = asyncio.Semaphore(12)
+
+    async def _scan_worker(sym: str, info: Dict[str, str]):
+        async with sem:
+            return await _scan_single_stock(sym, info, force_refresh=True)
+
+    tasks = [_scan_worker(sym, info) for sym, info in all_instruments.items()]
+    batch_results = await asyncio.gather(*tasks, return_exceptions=True)
+
+    results = [res for res in batch_results if isinstance(res, dict)]
+
+    _SCANNER_CACHE = results
+    _SCANNER_TIMESTAMP = time.time()
+    if response:
+        response.headers["X-Last-Refreshed"] = str(int(_SCANNER_TIMESTAMP))
+    return results

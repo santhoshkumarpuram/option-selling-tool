@@ -61,6 +61,13 @@ export default function Dashboard() {
   const [stocks, setStocks] = useState([])
   const [loading, setLoading] = useState(true)
   const [refreshing, setRefreshing] = useState(false)
+  const [lastRefreshed, setLastRefreshed] = useState(() => {
+    try {
+      return localStorage.getItem('dsrd_last_refreshed') || null
+    } catch {
+      return null
+    }
+  })
   const [search, setSearch] = useState('')
   const [signalFilter, setSignalFilter] = useState('ALL')
   const [sectorFilter, setSectorFilter] = useState('ALL')
@@ -70,11 +77,27 @@ export default function Dashboard() {
     loadData()
   }, [])
 
+  function markRefreshed() {
+    const timeStr = new Date().toLocaleTimeString('en-IN', {
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+      hour12: true
+    })
+    setLastRefreshed(timeStr)
+    try {
+      localStorage.setItem('dsrd_last_refreshed', timeStr)
+    } catch {
+      // ignore
+    }
+  }
+
   async function loadData() {
     setLoading(true)
     try {
       const data = await api.getScanner()
       setStocks(data)
+      markRefreshed()
     } catch (err) {
       console.error('Failed to load scanner data:', err)
       setStocks(getDemoStocks())
@@ -88,6 +111,7 @@ export default function Dashboard() {
     try {
       const data = await api.refreshScanner()
       setStocks(data)
+      markRefreshed()
     } catch {
       await loadData()
     } finally {
@@ -137,7 +161,13 @@ export default function Dashboard() {
             Systematic high-probability option selling rules: Direction (RSI) → Support & Resistance → Delta (0.07-0.15)
           </p>
         </div>
-        <div className="flex items-center gap-3 self-end sm:self-auto">
+        <div className="flex flex-wrap items-center gap-2 sm:gap-3 self-start sm:self-auto">
+          {lastRefreshed && (
+            <div className="flex items-center gap-1.5 text-xs text-slate-300 bg-[var(--color-bg-card)] px-3 py-2 rounded-lg border border-[var(--color-border)] shadow-sm">
+              <Clock className="w-3.5 h-3.5 text-[var(--color-primary)] shrink-0" />
+              <span>Last refreshed: <strong className="text-white font-mono font-bold">{lastRefreshed}</strong></span>
+            </div>
+          )}
           <button
             onClick={handleRefresh}
             disabled={refreshing}
